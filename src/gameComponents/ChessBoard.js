@@ -66,7 +66,15 @@ export default class ChessBoard {
     return false
   }
 
-  scanDirection(direction, square){
+  scanDirection(direction, square, length = 9){
+    if(length < 0){
+      return {
+        piecesFound: [],
+        coordinatesScanned: [],
+        distToClosestPiece: -1
+      }
+    }
+
     let piecesFound = []
     let coordinatesScanned = []
     let distToClosestPiece = -1
@@ -80,50 +88,64 @@ export default class ChessBoard {
 
     switch(direction){
       case "north":
-        for(let i = square[0]; i < 8; i++){
+        for(let i = square[0]; i < (square[0] + length + 1 > 8 ? 8 : square[0] + length + 1); i++){
           piecesFound.push(this.board[i][square[1]])
           coordinatesScanned.push([i,square[1]])
         }
         break
       case "east":
-        for(let i = square[1]; i < 8; i++){
+        for(let i = square[1]; i < (square[0] + length + 1 >= 8 ? 8 : square[0] + length + 1); i++){
           piecesFound.push(this.board[square[0]][i])
           coordinatesScanned.push([square[0],i])
         }
         break
       case "south":
-        for(let i = square[0]; i >= 0; i--){
+        for(let i = square[0]; i >= (square[0] - length < 0 ? 0 : square[0] - length); i--){
           piecesFound.push(this.board[i][square[1]])
           coordinatesScanned.push([i,square[1]])
         }
         break
       case "west":
-        for(let i = square[1]; i >= 0; i--){
+        for(let i = square[1]; i >= (square[1] - length < 0 ? 0 : square[1] - length); i--){
           piecesFound.push(this.board[square[0]][i])
           coordinatesScanned.push([square[0],i])
         }
         break
       case "northeast":
-        for(let i = 0; i < 8-square[eastFirstCollision]; i++){
+        for(let i = 0; i < (length + 1 > 8-square[eastFirstCollision] ? 8-square[eastFirstCollision] : length + 1); i++){
           piecesFound.push(this.board[square[0] + i][square[1] + i])
           coordinatesScanned.push([square[0] + i,square[1] + i])
         }
         break
       case "southeast":
-        let squaresUntilBoundarySE = westFirstCollision == 0 ? 8-square[westFirstCollision^1] : 1+square[westFirstCollision^1]
+        //let squaresUntilBoundarySE = westFirstCollision == 0 ? 8-square[1] : 1+square[0]
+        let squaresUntilBoundarySE = 1
+        if(westFirstCollision == 0){
+          squaresUntilBoundarySE = length+1 > 8-square[1] ? 8-square[1] : length+1
+        } else {
+          //squaresUntilBoundaryNW = westFirstCollision == 0 ? 8-square[0] : 1+square[1]
+          squaresUntilBoundarySE = length+1 > 1+square[0] ? 1+square[0] : length+1
+        }
         for(let i = 0; i < squaresUntilBoundarySE; i++){
           piecesFound.push(this.board[square[0] - i][square[1] + i])
           coordinatesScanned.push([square[0] - i,square[1] + i])
         }
         break
       case "southwest":
-        for(let i = 0; i <= 0+square[eastFirstCollision^1]; i++){
+        for(let i = 0; i <= (length > 0+square[eastFirstCollision^1] ? 0+square[eastFirstCollision^1] : length); i++){
           piecesFound.push(this.board[square[0] - i][square[1] - i])
           coordinatesScanned.push([square[0] - i,square[1] - i])
         }
         break
       case "northwest":
-        let squaresUntilBoundaryNW = westFirstCollision == 0 ? 8-square[westFirstCollision] : 1+square[westFirstCollision]
+        let squaresUntilBoundaryNW = 1
+        if(westFirstCollision == 0){
+          squaresUntilBoundaryNW = length+1 > 8-square[0] ? 8-square[0] : length+1
+        } else {
+          //squaresUntilBoundaryNW = westFirstCollision == 0 ? 8-square[0] : 1+square[1]
+          squaresUntilBoundaryNW = length+1 > 1+square[1] ? 1+square[1] : length+1
+        }
+        
         for(let i = 0; i < squaresUntilBoundaryNW; i++){
           piecesFound.push(this.board[square[0] + i][square[1] - i])
           coordinatesScanned.push([square[0] + i,square[1] - i])
@@ -161,8 +183,8 @@ export default class ChessBoard {
     }
   }
 
-  getScannedBoard(direction, square, asString = false){
-    let line = this.scanDirection(direction, square)
+  getScannedBoard(direction, square, length = 9, asString = false){
+    let line = this.scanDirection(direction, square, length)
     let scannedBoard = this.board.map(row => row.map(piece => piece)) // copy the board
     let boardAsString = ""
 
@@ -170,7 +192,7 @@ export default class ChessBoard {
       scannedBoard[coord[0]][coord[1]] = "X"
     }
 
-    scannedBoard[square[0]][square[1]] = "S" // mark the selected square
+    //scannedBoard[square[0]][square[1]] = "S" // mark the selected square
 
     if (line.distToClosestPiece != -1) {
       scannedBoard[line.coordinatesScanned[line.distToClosestPiece][0]][line.coordinatesScanned[line.distToClosestPiece][1]] = "C"
@@ -217,8 +239,8 @@ export default class ChessBoard {
 }
 
 let chessBoard = new ChessBoard()
-let square = [3,4]
-let line = chessBoard.getScannedBoard("north", square)
+let square = [6,4]
+let line = chessBoard.getScannedBoard("southeast", square)
 
 console.log(line)
 //console.log("selected: " + chessBoard.board[square[0]][square[1]])

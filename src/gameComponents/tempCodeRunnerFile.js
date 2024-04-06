@@ -1,1 +1,1 @@
-scanDirection
+null
