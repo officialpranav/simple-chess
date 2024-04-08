@@ -23,7 +23,7 @@ export default class ChessBoard {
       'C' : 'C'
     };
 
-    this.moveList = ["Start"]
+    this.moveList = [{from: [], to: [], piece: "", type: ""}]
   }
 
   getBoard(asString = false){
@@ -66,6 +66,13 @@ export default class ChessBoard {
     return false
   }
 
+  movePieceDirect(square1, square2){
+    this.moveList.push({from: square1, to: square2, piece: this.board[square1[0]][square1[1]], type: "normal"})
+
+    this.board[square2[0]][square2[1]] = this.board[square1[0]][square1[1]]
+    this.board[square1[0]][square1[1]] = "e"
+  }
+
   scanDirection(direction, square, length = 9){
     if(length < 0){
       return {
@@ -94,7 +101,7 @@ export default class ChessBoard {
         }
         break
       case "east":
-        for(let i = square[1]; i < (square[0] + length + 1 >= 8 ? 8 : square[0] + length + 1); i++){
+        for(let i = square[1]; i < (square[1] + length + 1 >= 8 ? 8 : square[1] + length + 1); i++){
           piecesFound.push(this.board[square[0]][i])
           coordinatesScanned.push([square[0],i])
         }
@@ -217,31 +224,123 @@ export default class ChessBoard {
 
     let color = currentPiece[0]
     let validMoves = []
+    let directions = []
+    const handleRookBishopQueen = (length = 9) => {
+      for(const direction of directions){
+        let scanResult = this.scanDirection(direction, square, length)
+        for(let i = 1; i < scanResult.coordinatesScanned.length; i++){
+          let piece = scanResult.piecesFound[i]
+          if(piece == "e"){
+            validMoves.push(scanResult.coordinatesScanned[i])
+          } else if(piece[0] != color){
+            validMoves.push(scanResult.coordinatesScanned[i])
+            break
+          } else {  
+            break
+          }
+        }
+      }
+    }
 
     switch(currentPiece[1]){
       case "r": //rook
-        let directions = ["north", "east", "south", "west"]
-
-        for(const direction of directions){
-          let scanResult = this.scanDirection(direction, square)
-          if(scanResult[2] == -1){
-            validMoves.push(...(scanResult[0].keys()))
-          } else {
-            
+        directions = ["north", "east", "south", "west"]
+        handleRookBishopQueen()
+        break
+      case "p":
+        console.log("p")
+        directions = color == "b" ? ["south", "southeast", "southwest"] : ["north", "northeast", "northwest"]
+        if(color == "b" && square[0] == 6 || color == "w" && square[0] == 1){
+          let scanResult = this.scanDirection(directions[0], square, 2)
+          for(let i = 1; i < 3; i++){
+            if(scanResult.piecesFound[i] == "e"){
+              validMoves.push(scanResult.coordinatesScanned[i])
+            } else {
+              break
+            }
+          }
+        } else {
+          let scanResult = this.scanDirection(directions[0], square, 1)
+          if(scanResult.distToClosestPiece == -1){
+            validMoves.push(scanResult.coordinatesScanned[1])
+          }
+        }
+        for(const direction of directions.slice(1)){
+          let scanResult = this.scanDirection(direction, square, 1)
+          if(scanResult.distToClosestPiece == 1 && scanResult.piecesFound[1][0] != color){
+            validMoves.push(scanResult.coordinatesScanned[1])
+          }
+        }
+        //check for en passant
+        if(color = "b" && square[0] == 3 || color == "w" && square[0] == 4){
+          let leftScan = this.scanDirection("west", square, 1)
+          let rightScan = this.scanDirection("east", square, 1)
+          if(this.moveList[this.moveList.length-1].piece[1] == "p" && Math.abs(this.moveList[this.moveList.length-1].from[0] - this.moveList[this.moveList.length-1].to[0]) == 2){
+            if(leftScan.piecesFound[1][1] == "p" && leftScan.piecesFound[1][0] != color){
+              validMoves.push([color == "b" ? 2 : 5, square[1] - 1])
+            } else if(rightScan.piecesFound[1][1] == "p" && rightScan.piecesFound[1][0] != color) {
+              validMoves.push([color == "b" ? 2 : 5, square[1] + 1])
+            }
           }
         }
 
         break
+      case "n":
+        let scanResult = this.scanDirection("knight", square)
+        for(let i = 1; i < scanResult.coordinatesScanned.length; i++){
+          if(scanResult.piecesFound[i][0] != color || scanResult.piecesFound[i] == "e"){
+            validMoves.push(scanResult.coordinatesScanned[i])
+          }
+        }
+        break
+      case "b":
+        directions = ["northeast", "southeast", "southwest", "northwest"]
+        handleRookBishopQueen()
+        break
+      case "q":
+        directions = ["north", "east", "south", "west", "northeast", "southeast", "southwest", "northwest"]
+        handleRookBishopQueen()
+        break
+      case "k":
+        directions = ["north", "east", "south", "west", "northeast", "southeast", "southwest", "northwest"]
+        handleRookBishopQueen(1)
+        break
+
     }
 
+    
+
     return validMoves
+  }
+
+  getBoardWithValidMoves(piecePosition, asString = false) {
+    // First, get the valid moves for the piece at the given position
+    let validMoves = this.getValidMoves(piecePosition);
+    let boardAsString = ""
+  
+    // Then, create a new board that will show the valid moves
+    let boardWithValidMoves = JSON.parse(JSON.stringify(this.board)); // Deep copy of the board
+  
+    // For each valid move, mark the corresponding square on the new board
+    console.log(validMoves)
+    for (let move of validMoves) {
+      boardWithValidMoves[move[0]][move[1]] = 'X';
+    }
+  
+    // Finally, return the new board
+    boardWithValidMoves.reverse().forEach(row => {
+      row.forEach(piece => {
+        boardAsString += (asString ? (piece == "e" ? "  " : (piece == "X" ? "X " : piece)) + " " : this.chessPieceToUnicode[piece] + " ")
+      })
+      boardAsString += "\n"
+    })
+
+    return boardAsString
   }
 }
 
 let chessBoard = new ChessBoard()
-let square = [6,4]
-let line = chessBoard.getScannedBoard("southeast", square)
+chessBoard.movePieceDirect([0,0],[5,4])
 
-console.log(line)
-//console.log("selected: " + chessBoard.board[square[0]][square[1]])
-//console.log(chessBoard.getBoard())
+
+console.log(chessBoard.getBoardWithValidMoves([5,4]))

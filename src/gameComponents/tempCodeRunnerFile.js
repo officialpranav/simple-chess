@@ -1,1 +1,2 @@
-null
+
+let chessBoard = new ChessBoard()
