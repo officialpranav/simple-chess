@@ -1,2 +1,1 @@
-
-let chessBoard = new ChessBoard()
+log

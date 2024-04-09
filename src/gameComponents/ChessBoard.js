@@ -24,11 +24,15 @@ export default class ChessBoard {
     };
 
     this.moveList = [{from: [], to: [], piece: "", type: ""}]
+//update when a king moves
+    this.kingLocations = {white: [0,4],
+                          black: [7,4]}
   }
 
   getBoard(asString = false){
     let boardAsString=""
-    this.board.reverse().forEach(row => {
+    let copy = JSON.parse(JSON.stringify(this.board))
+    copy.reverse().forEach(row => {
       row.forEach(piece => {
         boardAsString += (asString ? (piece == "e" ? "  " : piece) + " " : this.chessPieceToUnicode[piece] + " ")
       })
@@ -73,7 +77,9 @@ export default class ChessBoard {
     this.board[square1[0]][square1[1]] = "e"
   }
 
-  scanDirection(direction, square, length = 9){
+  scanDirection(direction, square, length = 9, customBoard = null){
+    let boardToScan = customBoard ? customBoard : this.board 
+
     if(length < 0){
       return {
         piecesFound: [],
@@ -192,14 +198,14 @@ export default class ChessBoard {
 
   getScannedBoard(direction, square, length = 9, asString = false){
     let line = this.scanDirection(direction, square, length)
-    let scannedBoard = this.board.map(row => row.map(piece => piece)) // copy the board
+    let scannedBoard = JSON.parse(JSON.stringify(this.board)) // copy the board
     let boardAsString = ""
 
     for(const coord of line.coordinatesScanned) {
       scannedBoard[coord[0]][coord[1]] = "X"
     }
 
-    //scannedBoard[square[0]][square[1]] = "S" // mark the selected square
+    scannedBoard[square[0]][square[1]] = "S" // mark the selected square
 
     if (line.distToClosestPiece != -1) {
       scannedBoard[line.coordinatesScanned[line.distToClosestPiece][0]][line.coordinatesScanned[line.distToClosestPiece][1]] = "C"
@@ -337,10 +343,43 @@ export default class ChessBoard {
 
     return boardAsString
   }
-}
+
+  getKingStatus(color, position = null){
+    let kingLocation = this.kingLocations[(color == "w" ? "white" : "black")]
+    let kingStatus = "safe"
+    let directions = ["north", "east", "south", "west", "northeast", "southeast", "southwest", "northwest", "knight"]
+    for(let i = 0; i < 9; i++){
+      let direction = directions[i]
+      let scanResult = this.scanDirection(direction, kingLocation)
+      if(scanResult.distToClosestPiece == -1 && direction != "knight"){
+        continue
+      } else if(direction=="knight"){
+        for(let i = 1; i < scanResult.piecesFound.length; i++){
+          let piece = scanResult.piecesFound[i]
+          if(piece[0] != color && piece[1] == "n"){
+            kingStatus = "check"
+            break
+          }
+        }
+      } else {
+        let piece = scanResult.piecesFound[scanResult.distToClosestPiece]
+        if(piece[0] != color){
+          if((i <= 3 && (piece[1] == "q" || piece[1] == "r")) || (i >= 4 && i <= 7 && (piece[1] == "q" || piece[1] == "b")) || (["northeast", "northwest"].includes(direction) && piece[1] == "p" && color=="w") || (["southeast", "southwest"].includes(direction) && piece[1] == "p" && color=="b")){
+            kingStatus = "check"
+            break
+          }
+        }
+      }
+    }
+    return {
+      kingStatus: kingStatus,
+      immovablePieces: []
+    }
+  }
+} 
 
 let chessBoard = new ChessBoard()
-chessBoard.movePieceDirect([0,0],[5,4])
+chessBoard.movePieceDirect([0,1],[6,6])
+console.log(chessBoard.getBoard())
+console.log(chessBoard.getKingStatus("b"))
 
-
-console.log(chessBoard.getBoardWithValidMoves([5,4]))
